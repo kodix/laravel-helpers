@@ -1,0 +1,28 @@
+{
+  "name": "kodix/laravel-helpers",
+  "description": "Laravel kodix helpers with classes and function used for common features in projects",
+  "type": "library",
+  "require": {
+    "malyusha/laravel-webpack-assets": "^1.0"
+  },
+  "require-dev": {
+    "laravel/framework": "^5.6",
+    "orchestra/testbench": "3.6.*"
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "malyusha",
+      "email": "im@kodix.ru"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Kodix\\LaravelHelpers\\": "src"
+    },
+    "files": [
+      "lib.php"
+    ]
+  },
+  "minimum-stability": "dev"
+}
