@@ -8,38 +8,56 @@
 
 namespace Kodix\LaravelHelpers\Support\FileUploader;
 
-use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Illuminate\Http\UploadedFile;
+use League\Flysystem\Util;
 
 class Uploader
 {
+    protected $fileNameModifier;
+
+    protected $uploadPrefix;
+
+    protected $uploadPath;
+
+    /**
+     * @var \Illuminate\Contracts\Filesystem\Filesystem $filesystem
+     */
+    protected $filesystem;
+
     /**
      * Uploader constructor.
      *
-     * @param \Symfony\Component\HttpFoundation\File\UploadedFile $file
+     * @param \Illuminate\Contracts\Filesystem\Filesystem $filesystem
      * @param array $settings
      */
-    public function __construct(UploadedFile $file, array $settings = [])
+    public function __construct(\Illuminate\Contracts\Filesystem\Filesystem $filesystem, array $settings = [])
     {
-        if (isset($settings['filename'])) {
-            $this->modifyFileName($settings['filename']);
-        }
-        $this->file = $file;
+        $this->filesystem = $filesystem;
+
+        $this->parseSettings($settings);
     }
 
-    protected $imageUploadSettings = [];
-
-    protected $fileNameModifier;
-
     /**
-     * @return array
+     * @param array $settings
      */
-    public function getUploadSettings(): array
+    protected function parseSettings(array $settings): void
     {
-        if (property_exists($this, 'uploadSettings')) {
-            return (array) $this->uploadSettings;
-        }
+        $this->setUploadPrefix(array_get($settings, 'upload_prefix', ''));
+        $this->setUploadPath(array_get($settings, 'path', ''));
+    }
 
-        return $this->imageUploadSettings;
+    public function setUploadPath(string $path)
+    {
+        $this->uploadPath = $path;
+
+        return $this;
+    }
+
+    public function setUploadPrefix(string $prefix)
+    {
+        $this->uploadPrefix = $prefix;
+
+        return $this;
     }
 
     /**
@@ -54,44 +72,80 @@ class Uploader
         return $this;
     }
 
-    public function setImageUploadSettings(array $settings): self
-    {
-        $this->imageUploadSettings = $settings;
-
-        return $this;
-    }
-
     /**
+     * @param \Illuminate\Http\UploadedFile $file
+     * @param null $modifier
+     *
      * @return string
      */
-    public function getFilename(): string
+    public function resolveFilename(UploadedFile $file, $modifier = null): string
     {
-        if ($this->fileNameModifier !== null) {
-            return is_callable($this->fileNameModifier) ? call_user_func($this->fileNameModifier, $this->file)
-                : $this->fileNameModifier;
+        $defaultFileName = $file->getClientOriginalName();
+
+        if ($modifier === null) {
+            return $defaultFileName;
         }
 
-        return $this->file->getClientOriginalName().'.'.$this->file->getClientOriginalExtension();
-    }
-
-    public function upload(): string
-    {
-        $filename = $this->getFilename();
-        $path = $this->getRelativePath($filename);
-
-        if (! app('filesystem')->makeDirectory($path)) {
-            throw new \Exception("Failed to create directory {$path}");
-        }
-
-        return $path.DIRECTORY_SEPARATOR.$filename;
+        return is_callable($modifier) ? $modifier($file) : $modifier;
     }
 
     /**
+     * Uploads file to the server.
+     *
+     * @param \Illuminate\Http\UploadedFile $file
+     * @param array $settings
+     *
+     * @return string
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
+     * @throws \Kodix\LaravelHelpers\Support\FileUploader\UploadException
+     */
+    public function upload(UploadedFile $file, array $settings = []): string
+    {
+        $filename = $this->resolveFilename($file, array_get($settings, 'filename'));
+        $imageSettings = (array) array_get($settings, 'image_settings', []);
+
+        $path = $this->getRelativePath($filename, array_get($settings, 'prefix', ''));
+
+        if (! $this->filesystem->makeDirectory($path)) {
+            throw new UploadException("Failed to create directory {$path}");
+        }
+
+        $content = $file->get();
+
+        if (count($imageSettings) > 0 && $this->shouldModifyAsImage($file)) {
+            $image = \Intervention\Image\Facades\Image::make($this->file);
+            foreach ($imageSettings as $method => $args) {
+                call_user_func_array([$image, $method], $args);
+            }
+
+            $content = $image->stream()->__toString();
+        }
+
+        $fullPath = $path.DIRECTORY_SEPARATOR.$filename;
+
+        $this->filesystem->put($fullPath, $content);
+
+        return $fullPath;
+    }
+
+    /**
+     * @param \Illuminate\Http\UploadedFile $file
+     *
      * @return bool
      */
-    protected function isImage(): bool
+    protected function shouldModifyAsImage(UploadedFile $file): bool
     {
-        $size = getimagesize($this->file->getRealPath());
+        return class_exists('Intervention\Image\Facades\Image') && $this->isImage($file);
+    }
+
+    /**
+     * @param \Illuminate\Http\UploadedFile $file
+     *
+     * @return bool
+     */
+    protected function isImage(UploadedFile $file): bool
+    {
+        $size = getimagesize($file->getRealPath());
 
         return (bool) $size;
     }
@@ -99,28 +153,39 @@ class Uploader
     /**
      * @param string $filename
      *
+     * @param string $dynamicPrefix
+     *
      * @return string
      */
-    protected function getRelativePath(string $filename): string
+    protected function getRelativePath(string $filename, $dynamicPrefix = ''): string
     {
-        // returns {config_path}/{model_prefix}/{generated_directories}
-        $prefix = $this->getEntityPrefix();
+        $uploadPath = $this->uploadPath;
+        $prefix = $this->getUploadPrefix().DIRECTORY_SEPARATOR.$dynamicPrefix;
 
-        if ($prefix !== '') {
-            $prefix .= DIRECTORY_SEPARATOR;
-        }
-
-        if (property_exists($this, 'uploadPath') && $this->uploadPath !== null) {
-            $path = is_callable($this->uploadPath) ? call_user_func($this->uploadPath, $this) : $this->uploadPath;
-        } else {
-            $path = $this->getPathHashParts($filename, 2);
-        }
-
-        return $this->getSystemUploadPrefix().DIRECTORY_SEPARATOR.$prefix.$path;
+        // returns {config_path}/{generated_directories}
+        return $uploadPath ?: Util::normalizePath($prefix.DIRECTORY_SEPARATOR.$this->getPathHashParts($filename, 2));
     }
 
-    protected function getSystemUploadPrefix(): string
+    /**
+     * @param $string
+     * @param int $parts
+     *
+     * @return string
+     */
+    private function getPathHashParts($string, $parts = 1): string
     {
-        return '';
+        $currentOffset = 2;
+        do {
+            $output[] = substr(sha1($string), $currentOffset, 2);
+            $currentOffset += 4;
+            $parts--;
+        } while ($parts !== 0);
+
+        return implode(DIRECTORY_SEPARATOR, $output);
+    }
+
+    public function getUploadPrefix(): string
+    {
+        return $this->uploadPrefix;
     }
 }
