@@ -143,7 +143,7 @@ class Uploader
      *
      * @return bool
      */
-    protected function isImage(UploadedFile $file): bool
+    public static function isImage(UploadedFile $file): bool
     {
         $size = getimagesize($file->getRealPath());
 
