@@ -30,9 +30,12 @@ trait HasFiles
      */
     protected $uploadFieldsKeys;
 
-    protected static function bootUpload()
+    protected static function bootHasFiles()
     {
-        static::updating(function (Model $model) {
+        /**@var \Illuminate\Contracts\Filesystem\Filesystem $filesystem */
+        $filesystem = app('filesystem');
+
+        static::updating(function (Model $model) use ($filesystem) {
             foreach ($model->getUploadFields() as $key) {
                 if (strpos($key, '->') !== false) {
                     // If we have json key with sequence, we need to get the value from model json attribute (we'll
@@ -48,30 +51,24 @@ trait HasFiles
                     $originalFile = $model->getOriginal($key);
                 }
 
-                /**@var \Illuminate\Contracts\Filesystem\Filesystem $filesystem */
-                $filesystem = app('filesystem');
-
                 if ($originalFile && $originalFile !== $newFile && $filesystem->exists($originalFile)) {
                     $filesystem->delete($originalFile);
                 }
             }
         });
 
-        static::saving(function (Model $model) {
+        static::saving(function (Model $model) use ($filesystem) {
             foreach ($model->getUploadFields() as $key) {
                 if ($model->{$key} instanceof UploadedFile) {
-                    $model->{$key} = (new Uploader($model->{$key}))->upload();
+                    $model->{$key} = (new Uploader($filesystem))->upload($model->{$key});
                 }
             }
         });
 
-        static::deleting(function (Model $model) {
+        static::deleting(function (Model $model) use ($filesystem) {
             if (in_array(SoftDeletes::class, trait_uses_recursive($model)) && ! $model->forceDeleting) {
                 return;
             }
-
-            /**@var \Illuminate\Contracts\Filesystem\Filesystem $filesystem */
-            $filesystem = app('filesystem');
 
             foreach ($model->getUploadFields() as $key) {
                 $filePath = $model->{$key.'_path'};
@@ -186,6 +183,21 @@ trait HasFiles
         $this->findUploadFields();
 
         return $this->uploadFieldsKeys;
+    }
+
+    public function getUploadUrl($attribute, $value)
+    {
+        return app('filesystem')->url($value);
+    }
+
+    public function getUploadPath($attribute, $value)
+    {
+        return $value;
+    }
+
+    public function setUploadFile($attribute, $value)
+    {
+
     }
 
     protected function findUploadFields()
