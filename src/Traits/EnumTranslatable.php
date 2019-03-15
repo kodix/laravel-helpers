@@ -12,6 +12,7 @@ trait EnumTranslatable
 
     /**
      * @return array
+     * @throws \ReflectionException
      */
     public static function getConstants(): array
     {
@@ -43,6 +44,7 @@ trait EnumTranslatable
      * @param array $without
      *
      * @return array
+     * @throws \ReflectionException
      */
     public static function getTranslationMap(array $without = []): array
     {

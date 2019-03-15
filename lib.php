@@ -1,16 +1,16 @@
 <?php
 // @formatter:off
 
-if (! function_exists('get_mock')) {
+if (! function_exists('get_fixture')) {
     /**
-     * Получает файл с массивом шаблонных данных для заполнения БД.
+     * Returns file with fixture data from given directory.
      *
      * @param string $fileName Название файла с массивом в папке mocks.
      * @param string $directory
      *
      * @return array
      */
-    function get_mock($fileName, $directory = 'database/mocks'): array
+    function get_fixture($fileName, $directory = 'database/mocks'): array
     {
         $fileName = ends_with('.php', $fileName) ? $fileName : $fileName.'.php';
         $file = require base_path($directory.DIRECTORY_SEPARATOR.$fileName);
@@ -21,7 +21,8 @@ if (! function_exists('get_mock')) {
 
 if (! function_exists('human_filesize')) {
     /**
-     * Выводит человеко-читаемый формат переданного размера.
+     * Returns human-readable size of file.
+     * NOTE: you should set translations for sizes formats in file.php lang file
      *
      * @param $bytes
      * @param int $decimals
@@ -30,7 +31,7 @@ if (! function_exists('human_filesize')) {
      */
     function human_filesize($bytes, $decimals = 2)
     {
-        $size = trans('lang.file.size');
+        $size = trans('file.size');
         $factor = floor((strlen($bytes) - 1) / 3);
 
         return sprintf("%.{$decimals}f", $bytes / pow(1024, $factor)).@$size[$factor];
@@ -39,7 +40,7 @@ if (! function_exists('human_filesize')) {
 
 if (! function_exists('is_connected')) {
     /**
-     * Проверяет наличие соединения сервера с интернетом.
+     * Checks whether server is connected to internet by ping google as the most tolerant resource.
      *
      * @return bool
      */
@@ -61,7 +62,17 @@ if (! function_exists('is_connected')) {
 }
 
 if (! function_exists('trans_or_default')) {
-    function trans_or_default(string $key, $default, array $replace = [], $locale = null)
+    /**
+     * Returns translated key or default value.
+     *
+     * @param string $key
+     * @param $default
+     * @param array $replace
+     * @param null $locale
+     *
+     * @return string
+     */
+    function trans_or_default(string $key, $default, array $replace = [], $locale = null): string
     {
         $message = trans($key, $replace, $locale);
 
@@ -70,6 +81,13 @@ if (! function_exists('trans_or_default')) {
 }
 
 if (! function_exists('get_domain')) {
+    /**
+     * Returns domain name from application config.
+     *
+     * @param string|null $prepend
+     *
+     * @return string
+     */
     function get_domain(string $prepend = null): string
     {
         [$scheme, $domain] = explode('://', config('app.url'), 2);
@@ -79,6 +97,13 @@ if (! function_exists('get_domain')) {
 }
 
 if (! function_exists('domain_is')) {
+    /**
+     * Checks whether domain name equals to given.
+     *
+     * @param string $prefix
+     *
+     * @return bool
+     */
     function domain_is(string $prefix): bool
     {
         $domain = get_domain();
