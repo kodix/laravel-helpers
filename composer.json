@@ -3,7 +3,7 @@
     "description": "Laravel kodix helpers with classes and function used for common features in projects",
     "type": "library",
     "require": {
-        "malyusha/laravel-webpack-assets": "^1.0"
+        "malyusha/laravel-webpack-assets": "^2.0"
     },
     "require-dev": {
         "laravel/framework": "^5.4"
