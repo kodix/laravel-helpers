@@ -20,7 +20,7 @@ trait HasMeta
     {
         $this->initializeMeta();
 
-        if (! is_array($name) && ! is_null($value)) {
+        if (! is_array($name) && $value !== null) {
             $meta = [$name => $value];
         } else {
             $meta = $name;
@@ -28,7 +28,7 @@ trait HasMeta
 
         foreach ($meta as $attribute => $content) {
             if ($content) {
-                array_set($this->meta, $attribute, $content);
+                Arr::set($this->meta, $attribute, $content);
             }
         }
 
@@ -75,7 +75,7 @@ trait HasMeta
      */
     protected function getMetaValue($key, $value = null, $useModifier = true)
     {
-        $value = $value ?? array_get((array) $this->meta, $key);
+        $value = $value ?? Arr::get((array) $this->meta, $key);
 
         if (! $value) {
             return null;
@@ -151,7 +151,7 @@ trait HasMeta
     /**
      * Инициализирует мета-данные массивом, если они еще не инициализированны.
      */
-    protected function initializeMeta(): void
+    protected function initializeMeta()
     {
         if (! property_exists($this, 'meta') || ! is_array($this->meta)) {
             $this->meta = [];
@@ -163,7 +163,7 @@ trait HasMeta
      *
      * @param \Kodix\LaravelHelpers\Meta\HasMetaInterface $model
      */
-    public function initializeMetaFromEntity(HasMetaInterface $model): void
+    public function initializeMetaFromEntity(HasMetaInterface $model)
     {
         $this->setMeta($model->getMeta());
     }

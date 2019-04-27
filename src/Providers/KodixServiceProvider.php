@@ -12,7 +12,7 @@ class KodixServiceProvider extends \Illuminate\Support\ServiceProvider
      *
      * @return void
      */
-    public function boot(): void
+    public function boot()
     {
         //
     }
@@ -22,12 +22,12 @@ class KodixServiceProvider extends \Illuminate\Support\ServiceProvider
      *
      * @return void
      */
-    public function register(): void
+    public function register()
     {
         $this->registerBlueprintMacros();
     }
 
-    protected function registerBlueprintMacros(): void
+    protected function registerBlueprintMacros()
     {
         Blueprint::macro('weight', function ($defaultOrder = 10) {
             /**@var Blueprint $this */

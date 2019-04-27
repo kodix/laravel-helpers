@@ -3,10 +3,11 @@
     "description": "Laravel kodix helpers with classes and function used for common features in projects",
     "type": "library",
     "require": {
-        "malyusha/laravel-webpack-assets": "^2.0"
+        "malyusha/laravel-webpack-assets": "^3.0"
     },
     "require-dev": {
-        "laravel/framework": "^5.4"
+        "laravel/framework": "^5.5",
+        "phpunit/phpunit": "^6.5"
     },
     "license": "MIT",
     "authors": [
@@ -23,9 +24,14 @@
             "lib.php"
         ]
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests"
+        }
+    },
     "extra": {
         "branch-alias": {
-            "dev-master": "1.0-dev"
+            "dev-master": "3.0-dev"
         },
         "laravel": {
             "aliases": {
@@ -38,5 +44,6 @@
     "config": {
         "sort-packages": true
     },
-    "minimum-stability": "dev"
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
