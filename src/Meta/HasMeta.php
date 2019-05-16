@@ -2,6 +2,8 @@
 
 namespace Kodix\LaravelHelpers\Meta;
 
+use Illuminate\Support\Arr;
+
 trait HasMeta
 {
     protected $cachedMetaModifiers;
